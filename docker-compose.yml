@@ -2,7 +2,7 @@ version: '3'
 
 services:
   react-app:	
-    image: reactApp:latest	
+    image: reactapp:latest	
     deploy:
       restart_policy:
         condition: "any"
