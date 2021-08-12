@@ -21,6 +21,5 @@ services:
       - "traefik.reactboilerplate.frontend.protocol=http"
 
 networks:
-  web:
-    external: 
-      name: bridge
+  bridge:
+    external: true
