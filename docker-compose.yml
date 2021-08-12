@@ -14,11 +14,9 @@ services:
     networks:	
       - bridge	
     labels:	
+      - "traefik.http.routers.reactboilerplate.rule=Host(`reactapp.dockerbox.local`)"
       - "traefik.docker.network=bridge"
-      - "traefik.enable=true"	
-      - "traefik.reactboilerplate.frontend.rule=Host:reactApp.dockerbox.local"
-      - "traefik.reactboilerplate.frontend.port=8080"
-      - "traefik.reactboilerplate.frontend.protocol=http"
+      - "traefik.http.services.reactboilerplate.loadbalancer.server.port=8080"
 
 networks:
   bridge:
