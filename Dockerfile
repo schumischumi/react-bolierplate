@@ -9,7 +9,7 @@ copy . /app
 RUN rm -rf ./node_modules
 
 # Install yarn then install deps
-RUN npm install yarn -g
+#RUN npm install yarn -g
 RUN yarn install
 
 # Build app
