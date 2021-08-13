@@ -124,7 +124,9 @@ pipeline {
           """
 
           if(createStackJson?.trim()) {
-            jsonParse(httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: createStackJson, url: "${portainerURL}/api/stacks?method=repository&type=1&endpointId=${env.ENDPOINTID}", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]])
+            def deployResponse = httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: createStackJson, url: "${portainerURL}/api/stacks?method=repository&type=1&endpointId=${env.ENDPOINTID}", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
+            def deployResult = new groovy.json.JsonSlurper().parseText(deployResponse.getContent())
+            echo "${deployResult}"
           }
 
         }
