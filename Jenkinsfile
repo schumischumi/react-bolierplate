@@ -60,7 +60,7 @@ pipeline {
             def endpointResponse = httpRequest httpMode: 'GET', ignoreSslErrors: true, url: "${portainerURL}/api/endpoints", validResponseCodes: '200', consoleLogResponseBody: true, customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
             def endpoint = new groovy.json.JsonSlurper().parseText(endpointResponse.getContent())
             //existingEndpointId = endpoint.Id
-            env.ENDPOINTID = "Bearer ${endpoint.Id}"
+            env.ENDPOINTID = "${endpoint.Id.join(',')}"
         
             
           }
