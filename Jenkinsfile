@@ -1,4 +1,5 @@
 #!/bin/groovy
+import groovy.json.JsonSlurperClassic 
 
 
 pipeline {
@@ -106,20 +107,24 @@ pipeline {
     stage('Deploy new stack to Portainer') {
       steps {
         script {
+          @NonCPS
+          def jsonParse(def json) {
+              new groovy.json.JsonSlurperClassic().parseText(json)
+          }
           //import groovy.json.JsonSlurperClassic 
           def createStackJson = ""
 
           // Stack does not exist
           // Generate JSON for when the stack is created          
-            def swarmResponse = httpRequest acceptType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'GET', ignoreSslErrors: true, consoleLogResponseBody: true, url: "${portainerURL}/api/endpoints/${env.ENDPOINTID}/docker/swarm", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
-            def swarmInfo = new groovy.json.JsonSlurper().parseText(swarmResponse.getContent())
+          def swarmResponse = httpRequest acceptType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'GET', ignoreSslErrors: true, consoleLogResponseBody: true, url: "${portainerURL}/api/endpoints/${env.ENDPOINTID}/docker/swarm", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
+          def swarmInfo = new groovy.json.JsonSlurper().parseText(swarmResponse.getContent())
 
-            createStackJson = """
-              {"Name": "${SwarmName}", "SwarmID": "$swarmInfo.ID", "RepositoryURL": "${gitURL}", "ComposeFilePathInRepository": "docker-compose.yml", "RepositoryAuthentication": false}
-            """
+          createStackJson = """
+            {"Name": "${SwarmName}", "SwarmID": "$swarmInfo.ID", "RepositoryURL": "${gitURL}", "ComposeFilePathInRepository": "docker-compose.yml", "RepositoryAuthentication": false}
+          """
 
           if(createStackJson?.trim()) {
-            httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: createStackJson, url: "${portainerURL}/api/stacks?method=repository&type=1&endpointId=${env.ENDPOINTID}", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
+            jsonParse(httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: createStackJson, url: "${portainerURL}/api/stacks?method=repository&type=1&endpointId=${env.ENDPOINTID}", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]])
           }
 
         }
