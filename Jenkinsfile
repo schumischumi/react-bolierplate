@@ -106,7 +106,7 @@ pipeline {
     stage('Deploy new stack to Portainer') {
       steps {
         script {
-          import groovy.json.JsonSlurperClassic 
+          //import groovy.json.JsonSlurperClassic 
           def createStackJson = ""
 
           // Stack does not exist
