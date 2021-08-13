@@ -1,12 +1,5 @@
 #!/bin/groovy
-
 import groovy.json.JsonSlurperClassic 
-
-
-@NonCPS
-def jsonParse(def json) {
-    new groovy.json.JsonSlurperClassic().parseText(json)
-}
 
 pipeline {
   agent any
@@ -121,7 +114,7 @@ pipeline {
           //}
 
           if(createStackJson?.trim()) {
-            jsonParse(httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: createStackJson, url: "http://portainer.dockerbox.local/api/stacks?method=repository&type=1&endpointId=3", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]])
+            httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: createStackJson, url: "http://portainer.dockerbox.local/api/stacks?method=repository&type=1&endpointId=3", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
           }
 
         }
