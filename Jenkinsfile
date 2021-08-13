@@ -107,10 +107,9 @@ pipeline {
     stage('Deploy new stack to Portainer') {
       steps {
         script {
-          @NonCPS
-          def jsonParse(def json) {
-              new groovy.json.JsonSlurperClassic().parseText(json)
-          }
+
+             // new groovy.json.JsonSlurperClassic().parseText(json)
+          
           //import groovy.json.JsonSlurperClassic 
           def createStackJson = ""
 
