@@ -1,5 +1,5 @@
 #!/bin/groovy
-import groovy.json.JsonSlurperClassic 
+
 
 pipeline {
   agent any
@@ -18,7 +18,7 @@ pipeline {
     stage('Git') {
       steps {
         script {
-          git 'https://github.com/schumischumi/react-bolierplate.git'
+          git "${gitURL}"
         }
       }
     }
@@ -43,7 +43,7 @@ pipeline {
               def json = """
                   {"Username": "$PORTAINER_USERNAME", "Password": "$PORTAINER_PASSWORD"}
               """
-              def jwtResponse = httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: json, url: "http://portainer.dockerbox.local/api/auth"
+              def jwtResponse = httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: json, url: "${portainerURL}/api/auth"
               def jwtObject = new groovy.json.JsonSlurper().parseText(jwtResponse.getContent())
               env.JWTTOKEN = "Bearer ${jwtObject.jwt}"
           }
@@ -54,14 +54,23 @@ pipeline {
     stage('Build Docker Image on Portainer') {
       steps {
         script {
+          // Get endpoint ID
+          String existingEndpointId = ""
+          if("true") {
+            def endpointResponse = httpRequest httpMode: 'GET', ignoreSslErrors: true, url: "${portainerURL}/api/endpoints", validResponseCodes: '200', consoleLogResponseBody: true, customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
+            def endpoint = new groovy.json.JsonSlurper().parseText(endpointResponse.getContent())
+            //existingEndpointId = endpoint.Id
+            env.ENDPOINTID = "Bearer ${endpoint.Id}"
+        
+            
+          }
+          echo "${env.ENDPOINTID}"
           // Build the image
-          //withCredentials([usernamePassword(credentialsId: 'Github', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_PASSWORD')]) {
               def repoURL = """
-                http://portainer.dockerbox.local/api/endpoints/3/docker/build?t=reactapp&remote=https://github.com/schumischumi/react-bolierplate.git&dockerfile=Dockerfile&nocache=true
+                ${portainerURL}/api/endpoints/${env.ENDPOINTID}/docker/build?t=${dockerTag}&remote=${gitURL}&dockerfile=Dockerfile&nocache=true
               """
               def imageResponse = httpRequest httpMode: 'POST', ignoreSslErrors: true, url: repoURL, validResponseCodes: '200', customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
-              imageResponse
-          //}
+              echo "${imageResponse}"
         }
       }
     }
@@ -72,11 +81,11 @@ pipeline {
           // Get all stacks
           String existingStackId = ""
           if("true") {
-            def stackResponse = httpRequest httpMode: 'GET', ignoreSslErrors: true, url: "http://portainer.dockerbox.local/api/stacks", validResponseCodes: '200', consoleLogResponseBody: true, customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
+            def stackResponse = httpRequest httpMode: 'GET', ignoreSslErrors: true, url: "${portainerURL}/api/stacks", validResponseCodes: '200', consoleLogResponseBody: true, customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
             def stacks = new groovy.json.JsonSlurper().parseText(stackResponse.getContent())
             
             stacks.each { stack ->
-              if(stack.Name == "BOILERPLATE") {
+              if(stack.Name == "${SwarmName}") {
                 existingStackId = stack.Id
               }
             }
@@ -85,7 +94,7 @@ pipeline {
           if(existingStackId?.trim()) {
             // Delete the stack
             def stackURL = """
-              http://portainer.dockerbox.local/api/stacks/$existingStackId?endpointId=3
+              ${portainerURL}/api/stacks/$existingStackId?endpointId=${env.ENDPOINTID}
             """
             httpRequest acceptType: 'APPLICATION_JSON', validResponseCodes: '204', httpMode: 'DELETE', ignoreSslErrors: true, url: stackURL, customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
 
@@ -97,24 +106,20 @@ pipeline {
     stage('Deploy new stack to Portainer') {
       steps {
         script {
-          
+          import groovy.json.JsonSlurperClassic 
           def createStackJson = ""
 
           // Stack does not exist
-          // Generate JSON for when the stack is created
-          //withCredentials([usernamePassword(credentialsId: 'Github', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_PASSWORD')]) {
-          
-            def swarmResponse = httpRequest acceptType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'GET', ignoreSslErrors: true, consoleLogResponseBody: true, url: "http://portainer.dockerbox.local/api/endpoints/3/docker/swarm", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
+          // Generate JSON for when the stack is created          
+            def swarmResponse = httpRequest acceptType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'GET', ignoreSslErrors: true, consoleLogResponseBody: true, url: "${portainerURL}/api/endpoints/${env.ENDPOINTID}/docker/swarm", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
             def swarmInfo = new groovy.json.JsonSlurper().parseText(swarmResponse.getContent())
 
             createStackJson = """
-              {"Name": "BOILERPLATE", "SwarmID": "$swarmInfo.ID", "RepositoryURL": "https://github.com/schumischumi/react-bolierplate.git", "ComposeFilePathInRepository": "docker-compose.yml", "RepositoryAuthentication": false}
+              {"Name": "${SwarmName}", "SwarmID": "$swarmInfo.ID", "RepositoryURL": "${gitURL}", "ComposeFilePathInRepository": "docker-compose.yml", "RepositoryAuthentication": false}
             """
 
-          //}
-
           if(createStackJson?.trim()) {
-            httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: createStackJson, url: "http://portainer.dockerbox.local/api/stacks?method=repository&type=1&endpointId=3", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
+            httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: createStackJson, url: "${portainerURL}/api/stacks?method=repository&type=1&endpointId=${env.ENDPOINTID}", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
           }
 
         }
