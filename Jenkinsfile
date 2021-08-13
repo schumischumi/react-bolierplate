@@ -116,23 +116,16 @@ pipeline {
           // Stack does not exist
           // Generate JSON for when the stack is created          
           def swarmResponse = httpRequest acceptType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'GET', ignoreSslErrors: true, consoleLogResponseBody: true, url: "${portainerURL}/api/endpoints/${env.ENDPOINTID}/docker/swarm", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
-          def swarmInfo = new groovy.json.JsonSlurper().parseText(swarmResponse.getContent())
+          def swarmInfo = new groovy.json.JsonSlurperClassic().parseText(swarmResponse.getContent())
 
           createStackJson = """
             {"Name": "${SwarmName}", "SwarmID": "$swarmInfo.ID", "RepositoryURL": "${gitURL}", "ComposeFilePathInRepository": "docker-compose.yml", "RepositoryAuthentication": false}
           """
 
-          // if(createStackJson?.trim()) {
-          //   def deployResponse = httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: createStackJson, url: "${portainerURL}/api/stacks?method=repository&type=1&endpointId=${env.ENDPOINTID}", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
-          //   def deployResult = new groovy.json.JsonSlurperClassic().parseText(deployResponse.getContent())
-          //   echo "${deployResult}"
-          // }
           if(createStackJson?.trim()) {
             def deployResponse = httpRequest acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON', validResponseCodes: '200', httpMode: 'POST', ignoreSslErrors: true, consoleLogResponseBody: true, requestBody: createStackJson, url: "${portainerURL}/api/stacks?method=repository&type=1&endpointId=${env.ENDPOINTID}", customHeaders:[[name:"Authorization", value: env.JWTTOKEN ], [name: "cache-control", value: "no-cache"]]
-            def lazyMap = new groovy.json.JsonSlurper().parseText(${deployResponse})
-            def m = [:]
-            m.putAll(lazyMap)
-            echo "${m}"
+            def deployResult = new groovy.json.JsonSlurperClassic().parseText(deployResponse)
+            echo "${deployResult}"
           }
 
         }
